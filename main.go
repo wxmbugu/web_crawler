@@ -11,6 +11,11 @@ import (
 	"golang.org/x/net/html"
 )
 
+type Link struct {
+	text string
+	url  string
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Please specify a starting page of the url")
@@ -32,9 +37,11 @@ func Parser(url string) {
 
 }
 
-func LinkReader(resp *http.Response) {
+func LinkReader(resp *http.Response) Link {
 	page := html.NewTokenizer(resp.Body)
-
+	link := Link{}
+	var url string
+	var text string
 	for {
 		tokenType := page.Next()
 		if tokenType == html.ErrorToken {
@@ -49,17 +56,17 @@ func LinkReader(resp *http.Response) {
 			if token.Data == "a" {
 				tokenType = page.Next()
 				if tokenType == html.TextToken {
-					fmt.Println(page.Token())
-					//break
+					text = page.Token().Data
+					fmt.Println(text)
 					for i := range token.Attr {
 						if token.Attr[i].Key == "href" {
-							url := strings.TrimSpace(token.Attr[i].Val)
+							url = strings.TrimSpace(token.Attr[i].Val)
 							fmt.Println(url)
 						}
 					}
 				}
 			}
-
 		}
 	}
+	return link
 }
