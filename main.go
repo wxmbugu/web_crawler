@@ -33,13 +33,18 @@ func Parser(url string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	LinkReader(resp)
+	//defer resp.Body.Close()
+	link := LinkReader(resp)
+	//fmt.Printf("%#v\n", link)
+	for _, v := range link {
+		fmt.Println(v)
+	}
 
 }
 
-func LinkReader(resp *http.Response) Link {
+func LinkReader(resp *http.Response) []Link {
 	page := html.NewTokenizer(resp.Body)
-	link := Link{}
+	link := []Link{}
 	var url string
 	var text string
 	for {
@@ -56,12 +61,12 @@ func LinkReader(resp *http.Response) Link {
 			if token.Data == "a" {
 				tokenType = page.Next()
 				if tokenType == html.TextToken {
-					text = page.Token().Data
-					fmt.Println(text)
+					text = strings.TrimSpace(page.Token().Data)
 					for i := range token.Attr {
 						if token.Attr[i].Key == "href" {
 							url = strings.TrimSpace(token.Attr[i].Val)
-							fmt.Println(url)
+							//fmt.Println(link)
+							link = append(link, Link{text: text, url: url})
 						}
 					}
 				}
