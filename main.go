@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -21,25 +22,20 @@ func main() {
 		fmt.Println("Please specify a starting page of the url")
 		os.Exit(1)
 	}
+	//log.SetPriorityString("info")
+	log.SetPrefix("crawler")
 	URL := os.Args[1]
 	Parser(URL)
 }
 
-func Parser(url string) {
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
-	//defer resp.Body.Close()
-	link := LinkReader(resp)
-	//fmt.Printf("%#v\n", link)
-	for _, v := range link {
-		fmt.Println(v)
-	}
+func Parser(URL string) {
 
+	//defer resp.Body.Close()
+
+	pages := dfs(URL, 2)
+	for _, page := range pages {
+		fmt.Println(page)
+	}
 }
 
 func LinkReader(resp *http.Response) []Link {
@@ -74,4 +70,68 @@ func LinkReader(resp *http.Response) []Link {
 		}
 	}
 	return link
+}
+
+func hrefs(links []Link, base string) []string {
+	var ret []string
+	for _, v := range links {
+		switch {
+		case strings.HasPrefix(v.url, "/"):
+			ret = append(ret, base+v.url)
+		case strings.HasPrefix(v.url, "http"):
+			ret = append(ret, v.url)
+		}
+	}
+	return ret
+}
+
+func get(urlStr string) []string {
+	resp, err := http.Get(urlStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	links := LinkReader(resp)
+	reqUrl := resp.Request.URL
+	fmt.Println(reqUrl)
+	baseUrl := &url.URL{
+		Scheme: reqUrl.Scheme,
+		Host:   reqUrl.Host,
+	}
+	base := baseUrl.String()
+	return filter(base, hrefs(links, base))
+}
+
+func filter(base string, links []string) []string {
+	var ret []string
+	for _, v := range links {
+		if strings.HasPrefix(v, base) {
+			ret = append(ret, v)
+		}
+	}
+	return ret
+}
+
+func dfs(urlStr string, maxDepth int) []string {
+	seen := make(map[string]struct{})
+	var q map[string]struct{}
+	nq := map[string]struct{}{
+		urlStr: {},
+	}
+	for i := 0; i <= maxDepth; i++ {
+		q, nq = nq, make(map[string]struct{})
+		for url, _ := range q {
+			if _, ok := seen[url]; ok {
+				continue
+			}
+			seen[url] = struct{}{}
+			for _, link := range get(url) {
+				nq[link] = struct{}{}
+			}
+		}
+	}
+	var ret []string
+	for url, _ := range seen {
+		ret = append(ret, url)
+	}
+	return ret
 }
