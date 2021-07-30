@@ -1,4 +1,4 @@
-# link_parser
+# Web_Crawler
 
 Simple link parser with go 
 
